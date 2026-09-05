@@ -1,0 +1,1013 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// AUTH & RBAC
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  image         String?
+  role          UserRole  @default(EMPLOYEE)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  permissions      UserPermission[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  managedProjects  Project[]        @relation("ProjectManager")
+  projectMembers   ProjectMember[]
+  assignedTasks    Task[]           @relation("TaskAssignee")
+  createdTasks     Task[]           @relation("TaskCreator")
+  taskComments     TaskComment[]
+  blogPosts        Blog[]
+  assignedLeads    Lead[]           @relation("LeadAssignee")
+  createdLeads     Lead[]           @relation("LeadCreator")
+  leadActivities   LeadActivity[]   @relation("LeadActivityUser")
+  employee         Employee?        @relation("SalaryUser")
+  expenses         Expense[]
+  budgetsCreated   Budget[]         @relation("BudgetCreator")
+  budgetsApproved  Budget[]         @relation("BudgetApprover")
+  documents        Document[]
+
+  @@index([email])
+  @@index([role])
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  SALES
+  FINANCE
+  HR
+  EDITOR
+  EMPLOYEE
+  VIEWER
+}
+
+model Permission {
+  id        String   @id @default(cuid())
+  resource  String
+  action    String
+  createdAt DateTime @default(now())
+
+  users UserPermission[]
+
+  @@unique([resource, action])
+}
+
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+}
+
+// ============================================
+// CRM / LEADS
+// ============================================
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+  CLOSED
+}
+
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum LeadSource {
+  ORGANIC_SEARCH
+  LINKEDIN
+  COLD_EMAIL
+  WHATSAPP
+  REFERRAL
+  INSTAGRAM
+  FACEBOOK
+  DIRECT
+  GOOGLE_BUSINESS
+  OTHER
+}
+
+model Lead {
+  id           String        @id @default(cuid())
+  name         String
+  company      String?
+  email        String?
+  phone        String?
+  whatsapp     String?
+  website      String?
+  industry     String?
+  location     String?
+  service      String?
+  source       LeadSource    @default(OTHER)
+  budget       String?
+  status       LeadStatus    @default(NEW)
+  priority     LeadPriority  @default(MEDIUM)
+  notes        String?
+  followUpDate DateTime?
+  assignedToId String?
+  createdById  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  assignedTo User?          @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  createdBy  User?          @relation("LeadCreator", fields: [createdById], references: [id])
+  activities LeadActivity[]
+  client     Client?
+
+  @@index([status])
+  @@index([source])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+model LeadActivity {
+  id        String     @id @default(cuid())
+  leadId    String
+  userId    String?
+  type      String
+  title     String
+  notes     String?
+  createdAt DateTime   @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User? @relation("LeadActivityUser", fields: [userId], references: [id])
+
+  @@index([leadId])
+}
+
+// ============================================
+// CLIENTS
+// ============================================
+
+model Client {
+  id            String   @id @default(cuid())
+  companyName   String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  website       String?
+  industry      String?
+  notes         String?
+  leadId        String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lead       Lead?        @relation(fields: [leadId], references: [id])
+  projects   Project[]
+  invoices   Invoice[]
+  quotations Quotation[]
+  documents  Document[]
+
+  @@index([companyName])
+}
+
+// ============================================
+// PROJECTS
+// ============================================
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  REVIEW
+  COMPLETED
+  CANCELLED
+}
+
+enum ProjectPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  REFUNDED
+  CANCELLED
+}
+
+model Project {
+  id            String          @id @default(cuid())
+  name          String
+  slug          String          @unique
+  description   String?
+  clientId      String?
+  managerId     String?
+  startDate     DateTime?
+  deadline      DateTime?
+  status        ProjectStatus   @default(PLANNING)
+  priority      ProjectPriority @default(MEDIUM)
+  budget        Decimal?        @db.Decimal(12, 2)
+  revenue       Decimal?        @db.Decimal(12, 2)
+  paymentStatus PaymentStatus   @default(PENDING)
+  progress      Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  client     Client?          @relation(fields: [clientId], references: [id])
+  manager    User?            @relation("ProjectManager", fields: [managerId], references: [id])
+  members     ProjectMember[]
+  tasks       Task[]
+  milestones  Milestone[]
+  expenses    Expense[]
+  invoices    Invoice[]
+  revenueRecords Revenue[]
+
+  @@index([status])
+  @@index([clientId])
+  @@index([managerId])
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String?  @default("developer")
+  joinedAt  DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  projectId      String
+  assigneeId     String?
+  createdById    String?
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  dueDate        DateTime?
+  estimatedHours Decimal?     @db.Decimal(6, 2)
+  actualHours    Decimal?     @db.Decimal(6, 2)
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator  User?         @relation("TaskCreator", fields: [createdById], references: [id])
+  comments TaskComment[]
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([taskId])
+}
+
+model Milestone {
+  id          String   @id @default(cuid())
+  projectId   String
+  title       String
+  description String?
+  dueDate     DateTime?
+  isCompleted Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// ============================================
+// EMPLOYEE / HR
+// ============================================
+
+enum Department {
+  MANAGEMENT
+  HR
+  OPERATIONS
+  DEVELOPMENT
+  DESIGN
+  MARKETING
+  SALES
+  AI_AUTOMATION
+  FINANCE
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  ON_NOTICE
+  TERMINATED
+  RESIGNED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+  WORK_FROM_HOME
+}
+
+model Employee {
+  id               String           @id @default(cuid())
+  userId           String?          @unique
+  name             String
+  email            String           @unique
+  phone            String?
+  designation      String?
+  department       Department       @default(OPERATIONS)
+  joiningDate      DateTime?
+  salary           Decimal?         @db.Decimal(10, 2)
+  employmentStatus EmploymentStatus @default(ACTIVE)
+  profileImage     String?
+  address          String?
+  emergencyContact String?
+  skills           String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user       User?          @relation("SalaryUser", fields: [userId], references: [id])
+  attendance Attendance[]
+  leaves     Leave[]
+  salaries   Salary[]
+  expenses   Expense[]
+
+  @@index([department])
+  @@index([employmentStatus])
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  employeeId String
+  date       DateTime         @db.Date
+  status     AttendanceStatus @default(PRESENT)
+  checkIn    DateTime?
+  checkOut   DateTime?
+  notes      String?
+  createdAt  DateTime         @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+  @@index([date])
+}
+
+enum LeaveType {
+  SICK
+  CASUAL
+  EARNED
+  UNPAID
+  MATERNITY
+  PATERNITY
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Leave {
+  id         String      @id @default(cuid())
+  employeeId String
+  type       LeaveType   @default(CASUAL)
+  startDate  DateTime    @db.Date
+  endDate    DateTime    @db.Date
+  days       Int
+  reason     String?
+  status     LeaveStatus @default(PENDING)
+  approvedBy String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@index([status])
+}
+
+model Salary {
+  id         String    @id @default(cuid())
+  employeeId String
+  month      Int
+  year       Int
+  basePay    Decimal   @db.Decimal(10, 2)
+  deductions Decimal   @db.Decimal(10, 2) @default(0)
+  bonus      Decimal   @db.Decimal(10, 2) @default(0)
+  netPay     Decimal   @db.Decimal(10, 2)
+  paidAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, month, year])
+  @@index([month, year])
+}
+
+// ============================================
+// FINANCE
+// ============================================
+
+model Revenue {
+  id            String        @id @default(cuid())
+  title         String
+  amount        Decimal       @db.Decimal(12, 2)
+  tax           Decimal       @db.Decimal(12, 2) @default(0)
+  totalAmount   Decimal       @db.Decimal(12, 2)
+  paymentMethod String?
+  paymentDate   DateTime?
+  status        PaymentStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  projectId String?
+  project   Project?        @relation(fields: [projectId], references: [id])
+
+  @@index([status])
+  @@index([paymentDate])
+  @@index([projectId])
+}
+
+enum ExpenseCategory {
+  SOFTWARE
+  HARDWARE
+  MARKETING
+  SALARY
+  OFFICE
+  TRAVEL
+  FOOD
+  CLOUD
+  HOSTING
+  SUBSCRIPTIONS
+  TAXES
+  OTHER
+}
+
+model Expense {
+  id            String          @id @default(cuid())
+  title         String
+  amount        Decimal         @db.Decimal(12, 2)
+  category      ExpenseCategory @default(OTHER)
+  projectId     String?
+  employeeId    String?
+  createdById   String?
+  date          DateTime        @default(now())
+  paymentMethod String?
+  receipt       String?
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  project  Project?  @relation(fields: [projectId], references: [id])
+  employee Employee? @relation(fields: [employeeId], references: [id])
+  createdBy User?    @relation(fields: [createdById], references: [id])
+
+  @@index([category])
+  @@index([date])
+  @@index([projectId])
+}
+
+model Budget {
+  id           String      @id @default(cuid())
+  name         String
+  amount       Decimal     @db.Decimal(12, 2)
+  spent        Decimal     @db.Decimal(12, 2) @default(0)
+  department   Department?
+  createdById  String?
+  approvedById String?
+  startDate    DateTime?
+  endDate      DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  createdBy  User? @relation("BudgetCreator", fields: [createdById], references: [id])
+  approvedBy User? @relation("BudgetApprover", fields: [approvedById], references: [id])
+
+  @@index([department])
+}
+
+// ============================================
+// INVOICING
+// ============================================
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique
+  clientId      String?
+  subtotal      Decimal       @db.Decimal(12, 2)
+  discount      Decimal       @db.Decimal(12, 2) @default(0)
+  taxRate       Decimal       @db.Decimal(5, 2)  @default(18)
+  taxAmount     Decimal       @db.Decimal(12, 2) @default(0)
+  total         Decimal       @db.Decimal(12, 2)
+  status        PaymentStatus @default(PENDING)
+  dueDate       DateTime?
+  paidAt        DateTime?
+  notes         String?
+  terms         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  projectId  String?
+  client     Client?        @relation(fields: [clientId], references: [id])
+  project    Project?       @relation(fields: [projectId], references: [id])
+  items      InvoiceItem[]
+
+  @@index([clientId])
+  @@index([projectId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model InvoiceItem {
+  id          String    @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Decimal   @db.Decimal(6, 2)  @default(1)
+  rate        Decimal   @db.Decimal(12, 2)
+  amount      Decimal   @db.Decimal(12, 2)
+  createdAt   DateTime  @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+// ============================================
+// QUOTATIONS
+// ============================================
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model Quotation {
+  id              String          @id @default(cuid())
+  quotationNumber String          @unique
+  clientId        String?
+  subtotal        Decimal         @db.Decimal(12, 2)
+  discount        Decimal         @db.Decimal(12, 2) @default(0)
+  taxRate         Decimal         @db.Decimal(5, 2)  @default(18)
+  taxAmount       Decimal         @db.Decimal(12, 2) @default(0)
+  total           Decimal         @db.Decimal(12, 2)
+  status          QuotationStatus @default(DRAFT)
+  validUntil      DateTime?
+  notes           String?
+  terms           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  client Client?          @relation(fields: [clientId], references: [id])
+  items  QuotationItem[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model QuotationItem {
+  id          String     @id @default(cuid())
+  quotationId String
+  description String
+  quantity    Decimal    @db.Decimal(6, 2)  @default(1)
+  rate        Decimal    @db.Decimal(12, 2)
+  amount      Decimal    @db.Decimal(12, 2)
+  createdAt   DateTime   @default(now())
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@index([quotationId])
+}
+
+// ============================================
+// CMS / CONTENT
+// ============================================
+
+model Service {
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  icon            String?
+  image           String?
+  description     String?
+  longDescription String?
+  features        String?
+  benefits        String?
+  process         String?
+  pricing         String?
+  ctaText         String?   @default("Get a Free Consultation")
+  ctaLink         String?
+  isActive        Boolean   @default(true)
+  order           Int       @default(0)
+  seoTitle        String?
+  seoDescription  String?
+  seoKeywords     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  products Product[]
+  blogs    Blog[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model Product {
+  id               String    @id @default(cuid())
+  title            String
+  slug             String    @unique
+  serviceId        String?
+  shortDescription String?
+  description      String?
+  price            Decimal?  @db.Decimal(10, 2)
+  originalPrice    Decimal?  @db.Decimal(10, 2)
+  discount         Int?
+  rating           Decimal?  @db.Decimal(2, 1)
+  reviewCount      Int       @default(0)
+  image            String?
+  images           String?
+  screenshots      String?
+  videos           String?
+  features         String?
+  specifications   String?
+  category         String?
+  ctaText          String?   @default("Request Demo")
+  ctaLink          String?
+  isActive         Boolean   @default(true)
+  isFeatured       Boolean   @default(false)
+  order            Int       @default(0)
+  seoTitle         String?
+  seoDescription   String?
+  seoKeywords      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  service Service?     @relation(fields: [serviceId], references: [id])
+  faqs    ProductFAQ[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model ProductFAQ {
+  id        String   @id @default(cuid())
+  productId String
+  question  String
+  answer    String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Blog {
+  id             String    @id @default(cuid())
+  title          String
+  slug           String    @unique
+  excerpt        String?
+  content        String?
+  coverImage     String?
+  authorId       String?
+  categoryId     String?
+  tags           String?
+  seoTitle       String?
+  metaDescription String?
+  focusKeyword   String?
+  canonicalUrl   String?
+  ogTitle        String?
+  ogDescription  String?
+  ogImage        String?
+  schema         String?
+  isPublished    Boolean   @default(false)
+  isFeatured     Boolean   @default(false)
+  publishedAt    DateTime?
+  scheduledAt    DateTime?
+  readingTime    Int?
+  viewCount      Int       @default(0)
+  serviceId      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  author   User?          @relation(fields: [authorId], references: [id])
+  category BlogCategory?  @relation(fields: [categoryId], references: [id])
+  service  Service?       @relation(fields: [serviceId], references: [id])
+
+  @@index([slug])
+  @@index([isPublished])
+  @@index([categoryId])
+  @@index([publishedAt])
+}
+
+model BlogCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  blogs Blog[]
+}
+
+model Testimonial {
+  id         String    @id @default(cuid())
+  clientName String
+  company    String?
+  designation String?
+  content    String
+  rating     Int?
+  image      String?
+  isActive   Boolean   @default(true)
+  isFeatured Boolean   @default(false)
+  isDemo     Boolean   @default(false)
+  order      Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([isActive])
+}
+
+model FAQ {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  category  String?
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model CaseStudy {
+  id             String    @id @default(cuid())
+  title          String
+  slug           String    @unique
+  client         String?
+  industry       String?
+  challenge      String?
+  solution       String?
+  implementation String?
+  results        String?
+  images         String?
+  technologies   String?
+  metrics        String?
+  testimonialId  String?
+  isActive       Boolean   @default(true)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([slug])
+}
+
+// ============================================
+// NAVIGATION
+// ============================================
+
+model Navigation {
+  id         String      @id @default(cuid())
+  location   String
+  label      String
+  url        String?
+  isExternal Boolean     @default(false)
+  order      Int         @default(0)
+  isActive   Boolean     @default(true)
+  parentId   String?
+  createdAt  DateTime    @default(now())
+
+  parent   Navigation?  @relation("NavParent", fields: [parentId], references: [id])
+  children Navigation[] @relation("NavParent")
+
+  @@index([location])
+}
+
+// ============================================
+// SITE SETTINGS / CMS
+// ============================================
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String?
+  group     String?
+  type      String   @default("text")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@index([group])
+}
+
+model Page {
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  content        String?
+  seoTitle       String?
+  seoDescription String?
+  canonicalUrl   String?
+  ogImage        String?
+  isPublished    Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([slug])
+}
+
+// ============================================
+// MEDIA
+// ============================================
+
+model Media {
+  id           String   @id @default(cuid())
+  url          String
+  publicId     String?
+  filename     String
+  mimeType     String
+  size         Int
+  width        Int?
+  height       Int?
+  folder       String?
+  altText      String?
+  caption      String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([folder])
+  @@index([mimeType])
+}
+
+// ============================================
+// DOCUMENTS
+// ============================================
+
+enum DocumentType {
+  QUOTATION
+  INVOICE
+  BILL
+  OFFER_LETTER
+  PAYSLIP
+  RECEIPT
+  PROPOSAL
+  OTHER
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  title       String
+  type        DocumentType @default(OTHER)
+  number      String?
+  clientId    String?
+  createdById String?
+  fileUrl     String?
+  content     String?
+  status      String       @default("draft")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  client    Client? @relation(fields: [clientId], references: [id])
+  createdBy User?   @relation(fields: [createdById], references: [id])
+
+  @@index([type])
+  @@index([clientId])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String?
+  type      String   @default("info")
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  metadata   String?
+  ip         String?
+  createdAt  DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([resource])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+model AnalyticsEvent {
+  id        String    @id @default(cuid())
+  event     String
+  path      String?
+  metadata  String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+
+  @@index([event])
+  @@index([path])
+  @@index([createdAt])
+}
+
+// ============================================
+// HOLIDAYS
+// ============================================
+
+model Holiday {
+  id   String   @id @default(cuid())
+  name String
+  date DateTime @db.Date
+  year Int
+
+  @@unique([date])
+  @@index([year])
+}

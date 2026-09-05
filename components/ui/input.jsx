@@ -1,0 +1,48 @@
+import { forwardRef } from 'react';
+import { cn } from '@/lib/utils';
+
+const Input = forwardRef(({ className, type, label, error, icon: Icon, ...props }, ref) => {
+  return (
+    <div className="w-full">
+      {label && (
+        <label className="mb-1.5 block text-sm font-medium text-[#F8FAFC]">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        {Icon && (
+          <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]">
+            <Icon className="h-4 w-4" />
+          </div>
+        )}
+        <input
+          type={type}
+          className={cn(
+            "flex h-10 w-full rounded-lg border bg-[#0B1220] px-3 py-2 text-sm text-[#F8FAFC] shadow-sm transition-colors duration-200",
+            "placeholder:text-[#94A3B8]/50",
+            "focus:outline-none focus:ring-2 focus:ring-[#22D3EE]/50 focus:border-[#22D3EE]/50",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+            error
+              ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
+              : "border-[rgba(148,163,184,0.15)]",
+            Icon && "pl-10",
+            className
+          )}
+          ref={ref}
+          aria-invalid={error ? "true" : undefined}
+          aria-describedby={error ? `${props.id}-error` : undefined}
+          {...props}
+        />
+      </div>
+      {error && (
+        <p id={`${props.id}-error`} className="mt-1.5 text-xs text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+});
+
+Input.displayName = "Input";
+
+export { Input };
