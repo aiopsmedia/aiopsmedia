@@ -1011,3 +1011,43 @@ model Holiday {
   @@unique([date])
   @@index([year])
 }
+
+// ============================================
+// FORMS (custom web forms + submissions)
+// ============================================
+
+model Form {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  description    String?
+  // JSON array of fields:
+  // [{ key, label, type, required, placeholder?, options?, multiple? }]
+  // type: text | email | textarea | select | number | tel | date | checkbox
+  fields         Json
+  successMessage String   @default("Thanks! Your submission has been received.")
+  redirectUrl    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  submissions FormSubmission[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formId    String
+  // JSON object of submitted field values (key -> value)
+  data      Json
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+  @@index([createdAt])
+}

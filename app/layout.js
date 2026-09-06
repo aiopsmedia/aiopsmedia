@@ -14,6 +14,9 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const GA_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID || 'G-Z07LGLNQYM';
+
 export const metadata = {
   title: {
     default: `${siteConfig.name} — ${siteConfig.tagline}`,
@@ -63,15 +66,19 @@ export default function RootLayout({ children }) {
         />
         {children}
         <ToastProvider />
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-Z07LGLNQYM" strategy="beforeInteractive" />
-        <Script id="google-analytics" strategy="beforeInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-Z07LGLNQYM');
-          `}
-        </Script>
+        {GA_ID && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="beforeInteractive" />
+            <Script id="google-analytics" strategy="beforeInteractive">
+              {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_ID}');
+            `}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

@@ -52,6 +52,7 @@ const NAV_SECTIONS = [
     children: [
       { label: 'Leads', href: '/admin/leads', icon: Users },
       { label: 'Clients', href: '/admin/clients', icon: Building2 },
+      { label: 'Forms', href: '/admin/forms', icon: ClipboardList },
       { label: 'Messages', href: '/admin/messages', icon: MessagesSquare },
     ],
   },

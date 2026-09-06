@@ -4,8 +4,44 @@ import { ragQuery } from '@/lib/ai/rag';
 
 const MAX_HISTORY = 10;
 
+// Simple in-memory rate limiter (per deployment instance). Guards the public,
+// paid Groq endpoint from abuse. For multi-instance deployments pair this with
+// a CDN/edge rate limit.
+const WINDOW_MS = 60 * 1000;
+const MAX_PER_WINDOW = 30;
+const rateLimits = new Map();
+
+function rateLimit(ip) {
+  const now = Date.now();
+  const record = rateLimits.get(ip);
+  if (!record || now - record.start > WINDOW_MS) {
+    rateLimits.set(ip, { start: now, count: 1 });
+    return { allowed: true };
+  }
+  record.count += 1;
+  if (record.count > MAX_PER_WINDOW) {
+    return { allowed: false, retryAfter: Math.ceil((record.start + WINDOW_MS - now) / 1000) };
+  }
+  return { allowed: true };
+}
+
+function clientIp(request) {
+  const fwd = request.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0].trim();
+  return request.headers.get('x-real-ip') || 'unknown';
+}
+
 export async function POST(request) {
   try {
+    const ip = clientIp(request);
+    const { allowed, retryAfter } = rateLimit(ip);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Too many requests. Try again in ${retryAfter}s.` },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } }
+      );
+    }
+
     const body = await request.json();
     const query = typeof body.message === 'string' ? body.message.trim() : '';
     const history = Array.isArray(body.history) ? body.history.slice(-MAX_HISTORY) : [];

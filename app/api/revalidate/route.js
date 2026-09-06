@@ -1,15 +1,20 @@
 import { NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 const REVALIDATE_SECRET = process.env.REVALIDATE_SECRET;
 
 export async function POST(request) {
   try {
-    if (REVALIDATE_SECRET) {
-      const authHeader = request.headers.get('authorization');
-      if (authHeader !== `Bearer ${REVALIDATE_SECRET}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    if (!REVALIDATE_SECRET) {
+      return NextResponse.json(
+        { error: 'Revalidation is disabled. Set REVALIDATE_SECRET in the environment to enable it.' },
+        { status: 404 }
+      );
+    }
+
+    const authHeader = request.headers.get('authorization');
+    if (authHeader !== `Bearer ${REVALIDATE_SECRET}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();

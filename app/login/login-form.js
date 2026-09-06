@@ -1,28 +1,58 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { login } from '@/actions/auth';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+
+function isStaleActionError(err) {
+  const msg = String(err?.message || err?.digest || err || '');
+  return (
+    msg.includes('UnrecognizedActionError') ||
+    msg.includes('failed-to-find-server-action') ||
+    msg.includes('Server Action') ||
+    msg.includes('404')
+  );
+}
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/admin';
+  const reloadedRef = useRef(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setNotice('');
 
     const formData = new FormData(e.currentTarget);
-    const result = await login(formData);
 
-    if (result?.error) {
-      setError(result.error);
-      setLoading(false);
+    try {
+      const result = await login(formData);
+
+      if (result?.error) {
+        setError(result.error);
+        setLoading(false);
+      } else if (result?.success) {
+        window.location.assign(result.redirectTo || '/admin');
+      }
+    } catch (err) {
+      console.error('[login] Unhandled login error:', err);
+      if (isStaleActionError(err)) {
+        setNotice('A new version was deployed. Refreshing...');
+        if (!reloadedRef.current) {
+          reloadedRef.current = true;
+          setTimeout(() => window.location.reload(), 600);
+        }
+      } else {
+        setError('Unable to sign in. Please try again.');
+        setLoading(false);
+      }
     }
   }
 
@@ -48,6 +78,12 @@ export default function LoginForm() {
           {error && (
             <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
               <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
+
+          {notice && (
+            <div className="mb-6 p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+              <p className="text-sm text-cyan-400">{notice}</p>
             </div>
           )}
 

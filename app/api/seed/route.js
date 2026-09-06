@@ -2,18 +2,28 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@aiopsmedia.com';
+const SEED_SECRET = process.env.SEED_SECRET;
 
 /**
  * Applies the demo seed content (services, products, FAQs, testimonials,
  * blog posts, case studies) into an empty database.
  * Safe to call repeatedly — uses upserts keyed on unique slugs.
+ *
+ * SECURITY: This endpoint is DISABLED unless the SEED_SECRET environment
+ * variable is configured. Use for initial demo setup only, then rotate the
+ * secret or leave it unset in production.
  */
 export async function GET(request) {
+  if (!SEED_SECRET) {
+    return NextResponse.json(
+      { error: 'Seeding is disabled. Set SEED_SECRET in the environment to enable it.' },
+      { status: 404 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const secret = searchParams.get('secret');
-  const configuredSecret = process.env.NEXT_PUBLIC_SEED_SECRET;
-
-  if (configuredSecret && secret !== configuredSecret) {
+  if (secret !== SEED_SECRET) {
     return NextResponse.json({ error: 'Invalid seed secret' }, { status: 403 });
   }
 
