@@ -5,7 +5,7 @@
   "description": "AIOpsMedia — Democratizing AI for Every Business. Production business operating system: public website, CMS, CRM, ERP, HR, finance, and project management.",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/generate-auth-secret.mjs && next build",
     "start": "next start",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",

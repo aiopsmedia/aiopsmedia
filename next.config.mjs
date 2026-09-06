@@ -1,3 +1,32 @@
+import { existsSync, readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Auth.js needs ONE stable AUTH_SECRET shared by every bundle in the process
+ * (App-routes AND the proxy). If the env var is missing, fall back to the
+ * build-time generated file so login works on hosts (e.g. Hostinger) where
+ * env vars were never configured. The file is created by
+ * scripts/generate-auth-secret.mjs and is gitignored.
+ */
+const PLACEHOLDER_SECRET = 'generate-with-npx-auth-secret';
+function ensureAuthSecret() {
+  const raw = process.env.AUTH_SECRET || '';
+  if (raw.trim() && raw.trim() !== PLACEHOLDER_SECRET) return;
+  try {
+    const file = join(__dirname, 'lib', 'generated', 'auth-secret.cjs');
+    if (existsSync(file)) {
+      const m = /AUTH_SECRET:\s*'([0-9a-f]{32,})'/.exec(readFileSync(file, 'utf8'));
+      if (m) process.env.AUTH_SECRET = m[1];
+    }
+  } catch {
+    // ignore; lib/auth falls back to a per-process random secret
+  }
+}
+ensureAuthSecret();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
