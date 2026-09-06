@@ -19,7 +19,12 @@ export async function login(formData) {
       redirect: false,
     });
   } catch (err) {
-    if (err?.cause?.err?.message === 'CredentialsSignin') {
+    const isInvalidCredentials =
+      err?.cause?.err?.message === 'CredentialsSignin' ||
+      err?.code === 'credentials' ||
+      err?.type === 'CredentialsSignin' ||
+      err?.message === 'CredentialsSignin';
+    if (isInvalidCredentials) {
       return { error: 'Invalid email or password.' };
     }
     return { error: 'An unexpected error occurred. Please try again.' };
