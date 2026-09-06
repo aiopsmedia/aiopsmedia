@@ -56,6 +56,11 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(()=>{let r=false;function hit(){if(r)return;r=true;location.reload();}function h(e){if(!r){const m=(e&&e.message)||'';if(/ChunkLoadError|Failed to load chunk|Loading (JS )?chunk/i.test(m))hit();}}function u(e){if(!r){const m=(e&&e.reason&&e.reason.message)||'';if(/UnrecognizedActionError|was not found on the server/i.test(m))hit();}}window.addEventListener('error',h);window.addEventListener('unhandledrejection',u);})()`,
+          }}
+        />
         {children}
         <ToastProvider />
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-Z07LGLNQYM" strategy="beforeInteractive" />
