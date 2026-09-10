@@ -57,7 +57,7 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col">
         <script
           dangerouslySetInnerHTML={{
-            __html: `(()=>{let r=false;function hit(){if(r)return;r=true;location.reload();}function h(e){if(!r){const m=(e&&e.message)||'';if(/ChunkLoadError|Failed to load chunk|Loading (JS )?chunk/i.test(m))hit();}}function u(e){if(!r){const m=(e&&e.reason&&e.reason.message)||'';if(/UnrecognizedActionError|was not found on the server/i.test(m))hit();}}window.addEventListener('error',h);window.addEventListener('unhandledrejection',u);})()`,
+            __html: `(()=>{try{const k='chunk-reload-at';function canReload(){try{const t=sessionStorage.getItem(k);const n=Date.now();if(t&&n-parseInt(t,10)<10000)return false;sessionStorage.setItem(k,String(n));return true}catch{return true}}function hit(){if(canReload())location.reload();}function h(e){const m=(e&&e.message)||'';if(/ChunkLoadError|Failed to load chunk|Loading (JS )?chunk/i.test(m))hit();}function u(e){const m=(e&&e.reason&&e.reason.message)||'';if(/UnrecognizedActionError|was not found on the server/i.test(m))hit();}window.addEventListener('error',h);window.addEventListener('unhandledrejection',u);}catch{}})()`,
           }}
         />
         {children}

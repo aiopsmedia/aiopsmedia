@@ -313,7 +313,7 @@ export const NAV_LINKS = [
     { label: 'Small Business', href: '/industries/small-business' },
     { label: 'All Industries', href: '/industries' },
   ]},
-  { label: 'Markets', href: '#markets', children: [
+  { label: 'Markets', href: '#', children: [
     { label: 'USA', href: '/usa' },
     { label: 'UK', href: '/uk' },
     { label: 'UAE', href: '/uae' },
