@@ -1,24 +1,12 @@
-import { createRequire } from 'module';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/**
- * Auth.js needs ONE stable AUTH_SECRET shared by every bundle in the process
- * (App-routes AND the proxy) and it must be STABLE across restarts. If the env
- * var is missing, we resolve (and if needed generate + persist) one via the
- * shared lib/auth/secret.cjs helper, so the same value is used at boot, in the
- * proxy, and in the NextAuth config.
- */
-const { resolveAuthSecret } = createRequire(import.meta.url)('./lib/auth/secret.cjs');
-function ensureAuthSecret() {
-  process.env.AUTH_SECRET = resolveAuthSecret();
-}
-ensureAuthSecret();
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
+
   async redirects() {
     return [
       { source: '/products', destination: '/services', permanent: true },
