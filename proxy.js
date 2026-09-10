@@ -8,6 +8,7 @@ const publicPaths = [
   '/api/contact',
   '/api/seed',
   '/api/sitemap',
+  '/api/health',
   '/blog',
   '/services',
   '/products',
@@ -15,6 +16,22 @@ const publicPaths = [
   '/contact',
   '/pricing',
   '/case-studies',
+  '/industries',
+  '/usa',
+  '/uk',
+  '/uae',
+  '/estimate',
+  '/book-consultation',
+  '/resources',
+  '/technology',
+  '/careers',
+  '/search',
+  '/landing',
+  '/privacy-policy',
+  '/terms-conditions',
+  '/cookies-policy',
+  '/data-protection',
+  '/refund-policy',
 ];
 
 export async function proxy(request) {
@@ -29,7 +46,7 @@ export async function proxy(request) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith('/admin')) {
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     const session = await auth();
 
     if (!session) {
@@ -60,5 +77,5 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*'],
 };

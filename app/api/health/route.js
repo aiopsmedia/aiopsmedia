@@ -1,6 +1,8 @@
 // Legitimate keep-alive / health check — NOT for fake analytics.
-// This endpoint is used by Vercel Cron / UptimeRobot to prevent cold starts
-// for serverless + Neon. It does NOT increment analytics page_view events.
+// On Hostinger Node.js: the process is persistent, no cold starts.
+// To prevent sleeping on shared plans, ping this endpoint externally
+// (e.g. cron-job.org every 10 min: GET https://aiopsmedia.com/api/health).
+// It does NOT increment analytics page_view events.
 // Filter in analytics: path !== '/api/health'
 export async function GET() {
   return Response.json(
