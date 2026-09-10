@@ -6,13 +6,24 @@ import { db } from '@/lib/db';
 const contactFormSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  phone: z.string().max(20).optional().or(z.literal('')),
+  phone: z.string().max(30).optional().or(z.literal('')),
   company: z.string().max(150).optional().or(z.literal('')),
+  country: z.string().max(100).optional().or(z.literal('')),
   service: z.string().max(200).optional().or(z.literal('')),
   budget: z.string().max(50).optional().or(z.literal('')),
-  message: z.string().min(10, 'Message must be at least 10 characters').max(5000),
+  projectType: z.string().max(100).optional().or(z.literal('')),
+  industry: z.string().max(100).optional().or(z.literal('')),
+  timeline: z.string().max(50).optional().or(z.literal('')),
+  integrations: z.string().max(500).optional().or(z.literal('')),
+  users: z.string().max(50).optional().or(z.literal('')),
+  project: z.string().max(5000).optional().or(z.literal('')),
+  date: z.string().max(100).optional().or(z.literal('')),
+  time: z.string().max(100).optional().or(z.literal('')),
+  timezone: z.string().max(100).optional().or(z.literal('')),
+  message: z.string().min(10, 'Message must be at least 10 characters').max(5000).optional().or(z.literal('')),
   preferredContact: z.enum(['email', 'phone', 'whatsapp']).optional().default('email'),
   website: z.string().optional().or(z.literal('')),
+  formType: z.string().optional().or(z.literal('')),
 });
 
 const rateLimitMap = new Map();
@@ -52,14 +63,25 @@ export async function createEnquiry(formData) {
   }
 
   const raw = {
-    name: formData.get('name'),
-    email: formData.get('email'),
+    name: formData.get('name') || '',
+    email: formData.get('email') || '',
     phone: formData.get('phone') || '',
     company: formData.get('company') || '',
+    country: formData.get('country') || '',
     service: formData.get('service') || '',
     budget: formData.get('budget') || '',
-    message: formData.get('message'),
+    projectType: formData.get('projectType') || '',
+    industry: formData.get('industry') || '',
+    timeline: formData.get('timeline') || '',
+    integrations: formData.get('integrations') || '',
+    users: formData.get('users') || '',
+    project: formData.get('project') || '',
+    date: formData.get('date') || '',
+    time: formData.get('time') || '',
+    timezone: formData.get('timezone') || '',
+    message: formData.get('message') || formData.get('project') || '',
     preferredContact: formData.get('preferredContact') || 'email',
+    formType: formData.get('formType') || '',
   };
 
   const parsed = contactFormSchema.safeParse(raw);
@@ -75,19 +97,39 @@ export async function createEnquiry(formData) {
 
   const data = parsed.data;
 
+  // Ensure message present for validation
+  if (!data.message || data.message.trim().length < 10) {
+    if (data.project && data.project.trim().length >= 10) data.message = data.project;
+    else return { success: false, errors: { message: 'Message/project must be at least 10 characters' } };
+  }
+
   try {
+    const location = data.country ? `${data.country}` : null;
+    const notesParts = [];
+    if (data.formType) notesParts.push(`[Form: ${data.formType}]`);
+    if (data.country) notesParts.push(`Country: ${data.country}`);
+    if (data.projectType) notesParts.push(`Project Type: ${data.projectType}`);
+    if (data.industry) notesParts.push(`Industry: ${data.industry}`);
+    if (data.timeline) notesParts.push(`Timeline: ${data.timeline}`);
+    if (data.integrations) notesParts.push(`Integrations: ${data.integrations}`);
+    if (data.users) notesParts.push(`Users: ${data.users}`);
+    if (data.date || data.time || data.timezone) notesParts.push(`Preferred: ${data.date || ''} ${data.time || ''} ${data.timezone || ''}`.trim());
+    notesParts.push(`Preferred contact: ${data.preferredContact}`);
+    notesParts.push('');
+    notesParts.push(data.message || data.project || '');
     const lead = await db.lead.create({
       data: {
         name: data.name,
         email: data.email,
         phone: data.phone || null,
         company: data.company || null,
-        service: data.service || null,
+        location: location,
+        service: data.service || data.projectType || null,
         budget: data.budget || null,
         source: 'DIRECT',
         status: 'NEW',
         priority: 'MEDIUM',
-        notes: `[Contact Form] Preferred: ${data.preferredContact}\n\n${data.message}`,
+        notes: notesParts.join('\n'),
       },
     });
 

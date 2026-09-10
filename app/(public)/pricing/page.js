@@ -171,9 +171,12 @@ export default async function PricingPage() {
               Pricing
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-[#94A3B8]">
-              Whether you need a custom solution or an off-the-shelf ERP product,
-              we have pricing options to fit your budget.
+              Whether you need a custom solution or an off-the-shelf ERP product, we have pricing that reflects real scope.
             </p>
+            <div className="mt-6 rounded-xl border border-[#22D3EE]/20 bg-[#22D3EE]/10 p-4 text-left">
+              <p className="text-sm font-semibold text-[#F8FAFC]">Custom Pricing — India vs International</p>
+              <p className="mt-1 text-xs leading-relaxed text-[#94A3B8]">India-based pricing examples are shown in ₹ for context. International clients (USA/UK/UAE) receive <strong className="text-[#F8FAFC]">custom estimates in USD/GBP/AED</strong> after discovery — scope, complexity, integrations, AI, users, design, deployment and maintenance drive price. We do not force one price worldwide and will clearly separate indicative ranges from your final quote. See <a href="/estimate" className="text-[#22D3EE] underline">Get a Project Estimate</a>.</p>
+            </div>
           </div>
         </div>
       </section>

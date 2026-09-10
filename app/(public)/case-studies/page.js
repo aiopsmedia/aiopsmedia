@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { generateMetadata as baseGenerateMetadata } from '@/lib/seo';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
+import { caseStudies as staticCases } from '@/lib/content/case-studies';
 
 export const metadata = baseGenerateMetadata({
   title: 'Case Studies',
@@ -33,6 +34,11 @@ export default async function CaseStudiesPage() {
   } catch {
     caseStudies = [];
   }
+  const fallback = caseStudies.length === 0 ? staticCases.map((c) => ({
+    id: c.slug, slug: c.slug, title: c.title, client: c.market + ' — Illustrative', industry: c.industry, challenge: c.challenge, solution: c.solution, results: c.outcomes, images: null, status: c.status,
+  })) : caseStudies;
+  const displayCases = caseStudies.length === 0 ? fallback : caseStudies;
+  const hasFallback = caseStudies.length === 0;
 
   return (
     <section className="bg-[#050816] pt-28 pb-20 sm:pt-36 sm:pb-28">
@@ -59,24 +65,11 @@ export default async function CaseStudiesPage() {
           </p>
         </div>
 
-        {caseStudies.length === 0 ? (
-          <div className="mt-16 rounded-2xl border border-[rgba(148,163,184,0.15)] bg-[#0B1220] p-12 text-center">
-            <Target className="mx-auto h-10 w-10 text-[#22D3EE]/30" />
-            <h2 className="mt-4 text-xl font-bold text-[#F8FAFC]">Case studies coming soon</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-[#94A3B8]">
-              We&apos;re documenting our latest client success stories. While you wait, explore our services
-              to see how we can help your business.
-            </p>
-            <Link
-              href="/services"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#22D3EE] to-[#8B5CF6] px-8 py-3 text-sm font-semibold text-[#050816] shadow-lg shadow-[#22D3EE]/20 transition-all hover:brightness-110"
-            >
-              Explore Services <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        ) : (
-          <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {caseStudies.map((cs) => {
+        {hasFallback && (
+          <div className="mt-6 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-center text-xs text-amber-200">Showing illustrative/demo case studies — labelled clearly until real client permission exists.</div>
+        )}
+        <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {displayCases.map((cs) => {
               const results = parseResults(cs.results);
               return (
                 <Link
@@ -121,6 +114,7 @@ export default async function CaseStudiesPage() {
                       </div>
                     )}
 
+                    <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-amber-300/80">{cs.status === 'illustrative' ? 'Illustrative Case Study — Demo Concept' : ''}</span>
                     <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-[#22D3EE] transition-all group-hover:gap-2">
                       Read Full Case Study <ArrowRight className="h-3 w-3" />
                     </span>
@@ -129,7 +123,6 @@ export default async function CaseStudiesPage() {
               );
             })}
           </div>
-        )}
       </div>
     </section>
   );

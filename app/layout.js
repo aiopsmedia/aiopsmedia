@@ -1,5 +1,4 @@
 import { Geist, Geist_Mono } from 'next/font/google';
-import Script from 'next/script';
 import { siteConfig } from '@/config';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import './globals.css';
@@ -13,9 +12,6 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 });
-
-const GA_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID || 'G-Z07LGLNQYM';
 
 export const metadata = {
   title: {
@@ -66,19 +62,6 @@ export default function RootLayout({ children }) {
         />
         {children}
         <ToastProvider />
-        {GA_ID && (
-          <>
-            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="beforeInteractive" />
-            <Script id="google-analytics" strategy="beforeInteractive">
-              {`
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', '${GA_ID}');
-            `}
-            </Script>
-          </>
-        )}
       </body>
     </html>
   );

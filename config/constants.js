@@ -285,11 +285,42 @@ export const DOCUMENT_TYPE_LABELS = {
 
 // ─── Navigation ───────────────────────────────────────
 export const NAV_LINKS = [
-  { label: 'Home', href: '/' },
-  { label: 'Services', href: '/services' },
-  { label: 'Products', href: '/products' },
-  { label: 'Blog', href: '/blog' },
+  { label: 'Services', href: '/services', children: [
+    { label: 'AI Development', href: '/services/ai-development' },
+    { label: 'AI Agents', href: '/services/ai-agents' },
+    { label: 'AI Automation', href: '/services/ai-automation' },
+    { label: 'Custom Software', href: '/services/custom-software-development' },
+    { label: 'CRM Development', href: '/services/crm-development' },
+    { label: 'ERP Development', href: '/services/erp-development' },
+    { label: 'Web & E-commerce', href: '/services/web-development' },
+    { label: 'View All Services', href: '/services' },
+  ]},
+  { label: 'Solutions', href: '/services', children: [
+    { label: 'Real Estate ERP', href: '/services/real-estate-erp' },
+    { label: 'School ERP', href: '/services/school-erp' },
+    { label: 'Business Automation', href: '/services/business-process-automation' },
+    { label: 'E-commerce', href: '/services/ecommerce-development' },
+    { label: 'SEO & Marketing', href: '/services/seo' },
+  ]},
+  { label: 'Industries', href: '/industries', children: [
+    { label: 'Real Estate', href: '/industries/real-estate' },
+    { label: 'Education', href: '/industries/education' },
+    { label: 'Healthcare', href: '/industries/healthcare' },
+    { label: 'E-commerce', href: '/industries/ecommerce' },
+    { label: 'Hospitality', href: '/industries/hospitality' },
+    { label: 'Professional Services', href: '/industries/professional-services' },
+    { label: 'Startups', href: '/industries/startups' },
+    { label: 'Small Business', href: '/industries/small-business' },
+    { label: 'All Industries', href: '/industries' },
+  ]},
+  { label: 'Markets', href: '#markets', children: [
+    { label: 'USA', href: '/usa' },
+    { label: 'UK', href: '/uk' },
+    { label: 'UAE', href: '/uae' },
+    { label: 'Dubai', href: '/uae/dubai' },
+  ]},
   { label: 'Case Studies', href: '/case-studies' },
+  { label: 'Insights', href: '/blog' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
 ];

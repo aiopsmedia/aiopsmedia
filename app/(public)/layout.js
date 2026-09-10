@@ -1,6 +1,7 @@
 import { SiteHeader } from '@/components/public/site-header';
 import { SiteFooter } from '@/components/public/site-footer';
 import AiChatbot from '@/components/public/ai-chatbot';
+import CookieConsent from '@/components/public/cookie-consent';
 import { generateOrganizationSchema, generateLocalBusinessSchema } from '@/lib/seo';
 
 const schemas = [generateOrganizationSchema(), generateLocalBusinessSchema()];
@@ -19,6 +20,7 @@ export default function PublicLayout({ children }) {
       <main className="flex-1">{children}</main>
       <SiteFooter />
       <AiChatbot />
+      <CookieConsent />
     </div>
   );
 }

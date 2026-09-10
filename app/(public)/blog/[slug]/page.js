@@ -3,10 +3,12 @@ import { notFound } from 'next/navigation';
 import { Clock, Calendar, Tag, ArrowLeft, Share2, Copy, CheckCircle } from 'lucide-react';
 import { db } from '@/lib/db';
 import { formatDate } from '@/lib/utils';
-import { generateMetadata as baseGenerateMetadata, generateArticleSchema } from '@/lib/seo';
+import { generateMetadata as baseGenerateMetadata, generateArticleSchema, generateFAQSchema } from '@/lib/seo';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { ShareButtons } from './share-buttons';
+import { getBlog as getStaticBlog, blogs as staticBlogs } from '@/lib/content/blogs';
+import { getService } from '@/lib/content/services';
 
 const fallbackPost = {
   title: 'How AI is Transforming Business Operations in 2026',
@@ -26,13 +28,12 @@ const fallbackPost = {
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const post = await getPost(slug);
-
+  let post = await getPost(slug);
+  if (!post) post = getStaticBlog(slug) ? { ...getStaticBlog(slug), seoTitle: getStaticBlog(slug).seoTitle, metaDescription: getStaticBlog(slug).seoDescription } : null;
   if (!post) return baseGenerateMetadata({ title: 'Post Not Found', url: `/blog/${slug}` });
-
   return baseGenerateMetadata({
     title: post.seoTitle || post.title,
-    description: post.metaDescription || post.excerpt,
+    description: post.metaDescription || post.excerpt || post.description,
     url: `/blog/${slug}`,
     type: 'article',
   });
@@ -119,31 +120,65 @@ function extractHeadings(html) {
 
 export default async function BlogPostPage({ params }) {
   const { slug } = await params;
-  const post = (await getPost(slug)) || fallbackPost;
+  let post = await getPost(slug);
+  let isStatic = false;
+  let staticPost = getStaticBlog(slug);
+  if (!post && staticPost) {
+    isStatic = true;
+    post = {
+      id: staticPost.slug,
+      title: staticPost.title,
+      slug: staticPost.slug,
+      excerpt: staticPost.description,
+      content: staticPost.content,
+      coverImage: null,
+      publishedAt: new Date(staticPost.publishedAt),
+      readingTime: staticPost.readingTime,
+      viewCount: 0,
+      tags: staticPost.tags.join(','),
+      category: { name: staticPost.category, slug: staticPost.category.toLowerCase().replace(/ /g, '-') },
+      author: { name: 'AIOpsMedia Team', image: null },
+      seoTitle: staticPost.seoTitle,
+      metaDescription: staticPost.seoDescription,
+      faq: staticPost.faq || [],
+      relatedServices: staticPost.relatedServices || [],
+    };
+  } else if (!post) {
+    post = fallbackPost;
+  }
 
   if (!post) notFound();
 
-  if (post.viewCount !== undefined && post !== fallbackPost) {
+  if (post.viewCount !== undefined && post !== fallbackPost && !isStatic) {
     incrementViews(slug);
   }
 
   const tags = post.tags ? post.tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
   const headings = extractHeadings(post.content);
-  const relatedPosts = await getRelatedPosts(post.category?.slug, slug);
+  const relatedPosts = isStatic ? staticBlogs.filter((b) => b.slug !== slug && b.category === staticPost.category).slice(0,3).map((b) => ({
+    id: b.slug, title: b.title, slug: b.slug, excerpt: b.description, coverImage: null, publishedAt: new Date(b.publishedAt), readingTime: b.readingTime, category: { name: b.category },
+  })) : await getRelatedPosts(post.category?.slug, slug);
 
   const schema = generateArticleSchema({
     ...post,
     author: post.author || { name: 'AIOpsMedia Team' },
   });
+  const faqSchema = post.faq && post.faq.length > 0 ? generateFAQSchema(post.faq.map((f) => ({ question: f.q, answer: f.a }))) : null;
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://aiopsmedia.com/' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://aiopsmedia.com/blog' },
+      { '@type': 'ListItem', position: 3, name: post.title },
+    ],
+  };
 
   return (
     <>
-      {schema && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-        />
-      )}
+      {schema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />}
+      {faqSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
       <article className="bg-[#050816] pt-28 pb-20 sm:pt-36">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -211,6 +246,28 @@ export default async function BlogPostPage({ params }) {
                 dangerouslySetInnerHTML={{ __html: post.content || '' }}
               />
 
+              {post.relatedServices && post.relatedServices.length > 0 && (
+                <div className="mt-10 rounded-xl border border-[rgba(148,163,184,0.15)] bg-[#0B1220] p-5">
+                  <h3 className="text-sm font-semibold text-[#F8FAFC]">Related Services</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {post.relatedServices.map((slug) => {
+                      const svc = getService(slug);
+                      if (!svc) return null;
+                      return <Link key={slug} href={`/services/${slug}`} className="rounded-full bg-[#22D3EE]/10 border border-[#22D3EE]/20 px-3 py-1 text-xs text-[#22D3EE] hover:bg-[#22D3EE]/20">{svc.title}</Link>;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {post.faq && post.faq.length > 0 && (
+                <div className="mt-10 rounded-xl border border-[rgba(148,163,184,0.15)] bg-[#0B1220] p-5">
+                  <h3 className="text-sm font-semibold text-[#F8FAFC]">FAQs</h3>
+                  <div className="mt-3 space-y-3">
+                    {post.faq.map((f) => <div key={f.q}><p className="text-sm font-semibold text-[#F8FAFC]">{f.q}</p><p className="text-sm text-[#94A3B8]">{f.a}</p></div>)}
+                  </div>
+                </div>
+              )}
+
               {tags.length > 0 && (
                 <div className="mt-10 flex flex-wrap items-center gap-2 border-t border-[rgba(148,163,184,0.15)] pt-6">
                   <Tag className="h-4 w-4 text-[#94A3B8]" />
@@ -224,6 +281,12 @@ export default async function BlogPostPage({ params }) {
                   ))}
                 </div>
               )}
+
+              <div className="mt-10 rounded-xl bg-gradient-to-r from-[#22D3EE]/10 to-[#8B5CF6]/10 border border-[#22D3EE]/20 p-6 text-center">
+                <h3 className="font-bold text-[#F8FAFC]">Need help with this?</h3>
+                <p className="mt-1 text-sm text-[#94A3B8]">Tell us what you are building — we will propose the right architecture.</p>
+                <Link href="/book-consultation" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#22D3EE] to-[#8B5CF6] px-6 py-3 text-sm font-semibold text-[#050816]">Book a Free Consultation</Link>
+              </div>
 
               <div className="mt-10 border-t border-[rgba(148,163,184,0.15)] pt-8">
                 <ShareButtons url={`/blog/${slug}`} title={post.title} />

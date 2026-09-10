@@ -8,25 +8,36 @@ import { Button } from '@/components/ui/button';
 import { createEnquiry } from '@/actions/enquiry';
 
 const serviceOptions = [
-  'AI & Automation',
+  'AI Development',
+  'AI Agents',
+  'AI Automation',
   'Custom Software Development',
-  'Web Development',
-  'Mobile App Development',
-  'Cloud Solutions',
-  'Cybersecurity',
-  'RealEstate ERP',
+  'CRM Development',
+  'ERP Development',
+  'Real Estate ERP',
   'School ERP',
+  'Web Development',
+  'E-commerce Development',
+  'Business Process Automation',
+  'Social Media Management',
+  'SEO',
+  'Meta Ads',
+  'Google Ads',
   'Other',
 ];
 
+const countryOptions = ['United States','United Kingdom','United Arab Emirates','India','Other'];
+
 const budgetOptions = [
-  'Under ₹50,000',
-  '₹50,000 - ₹2,00,000',
-  '₹2,00,000 - ₹5,00,000',
-  '₹5,00,000 - ₹10,00,000',
-  'Above ₹10,00,000',
+  'Under $5k / ₹50k',
+  ' $5k - $20k / ₹50k - 2L',
+  ' $20k - $50k / ₹2L - 5L',
+  ' $50k - $100k / ₹5L - 10L',
+  'Above $100k / ₹10L',
   'Not Sure Yet',
 ];
+
+const projectTypes = ['Website','Web Application','CRM','ERP','AI Agent','AI Automation','SaaS','E-commerce','Other'];
 
 export function ContactForm({ preselectedService = '' }) {
   const [isPending, startTransition] = useTransition();
@@ -44,8 +55,10 @@ export function ContactForm({ preselectedService = '' }) {
     email: '',
     phone: '',
     company: '',
+    country: '',
     service: initialService,
     budget: '',
+    projectType: '',
     message: '',
     preferredContact: 'email',
     website: '',
@@ -82,8 +95,10 @@ export function ContactForm({ preselectedService = '' }) {
     fd.append('email', form.email);
     fd.append('phone', form.phone);
     fd.append('company', form.company);
+    fd.append('country', form.country);
     fd.append('service', form.service);
     fd.append('budget', form.budget);
+    fd.append('projectType', form.projectType);
     fd.append('message', form.message);
     fd.append('preferredContact', form.preferredContact);
     fd.append('website', form.website);
@@ -93,8 +108,8 @@ export function ContactForm({ preselectedService = '' }) {
       if (res.success) {
         setResult('success');
         setForm({
-          name: '', email: '', phone: '', company: '', service: initialService,
-          budget: '', message: '', preferredContact: 'email', website: '',
+          name: '', email: '', phone: '', company: '', country: '', service: initialService,
+          budget: '', projectType: '', message: '', preferredContact: 'email', website: '',
         });
       } else {
         if (res.errors) setErrors(res.errors);
@@ -161,7 +176,7 @@ export function ContactForm({ preselectedService = '' }) {
           id="phone"
           type="tel"
           label="Phone Number"
-          placeholder="+91 98765 43210"
+          placeholder="+91 98765 43210 / +1 ..."
           value={form.phone}
           onChange={(e) => update('phone', e.target.value)}
           error={errors.phone}
@@ -169,13 +184,30 @@ export function ContactForm({ preselectedService = '' }) {
         />
         <Input
           id="company"
-          label="Company Name"
+          label="Business Name"
           placeholder="Your Company"
           value={form.company}
           onChange={(e) => update('company', e.target.value)}
           error={errors.company}
           disabled={isPending}
         />
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="w-full">
+          <label htmlFor="country" className="mb-1.5 block text-sm font-medium text-[#F8FAFC]">Country *</label>
+          <select id="country" value={form.country} onChange={(e) => update('country', e.target.value)} disabled={isPending} className="flex h-10 w-full rounded-lg border border-[rgba(148,163,184,0.15)] bg-[#0B1220] px-3 py-2 text-sm text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#22D3EE]/50">
+            <option value="">Select country</option>
+            {countryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="w-full">
+          <label htmlFor="projectType" className="mb-1.5 block text-sm font-medium text-[#F8FAFC]">Project Type</label>
+          <select id="projectType" value={form.projectType} onChange={(e) => update('projectType', e.target.value)} disabled={isPending} className="flex h-10 w-full rounded-lg border border-[rgba(148,163,184,0.15)] bg-[#0B1220] px-3 py-2 text-sm text-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#22D3EE]/50">
+            <option value="">Select</option>
+            {projectTypes.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">

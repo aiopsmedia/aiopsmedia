@@ -54,7 +54,7 @@ const timeline = [
   { year: '2024', title: 'Founded', description: 'AIOpsMedia was founded in Kishanganj, Bihar with a mission to democratize AI for every business.' },
   { year: '2024', title: 'First Products', description: 'Launched RealEstate ERP and School ERP — our first industry-specific solutions.' },
   { year: '2025', title: 'Growing Team', description: 'Expanded the team across development, design, and AI/automation departments.' },
-  { year: '2026', title: '50+ Projects', description: 'Crossed 50 projects delivered and 30+ happy clients across multiple industries.' },
+  { year: '2026', title: 'Building Forward', description: 'Focused on AI, software and automation for businesses worldwide — built in India, serving clients remotely. We avoid unverified project/client counts until audited.' },
 ];
 
 export default async function AboutPage() {
@@ -211,11 +211,12 @@ export default async function AboutPage() {
             </span>
           </h2>
           <div className="mx-auto mt-10 max-w-3xl">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <p className="text-center text-xs text-[#94A3B8]/70">Only technologies we actually use — see <Link href="/technology" className="text-[#22D3EE]">Technology</Link>.</p>
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {[
-                'React / Next.js', 'Node.js / Express', 'Python / Django', 'PostgreSQL / MongoDB',
-                'AWS / GCP / Azure', 'Docker / Kubernetes', 'TensorFlow / PyTorch', 'React Native / Flutter',
-                'TypeScript', 'GraphQL / REST', 'Tailwind CSS', 'Prisma ORM',
+                'Next.js / React', 'Node.js / REST APIs', 'PostgreSQL / MongoDB',
+                'Prisma ORM', 'Tailwind CSS', 'Vercel / Cloud',
+                'LLM APIs (Groq)', 'Vector Search (pgvector)',
               ].map((tech) => (
                 <div
                   key={tech}

@@ -6,6 +6,7 @@ import { generateMetadata as baseGenerateMetadata } from '@/lib/seo';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { blogs as staticBlogs } from '@/lib/content/blogs';
 
 export const metadata = baseGenerateMetadata({
   title: 'Blog',
@@ -78,44 +79,30 @@ async function getBlogData(page, search, category) {
   }
 }
 
-const fallbackPosts = [
-  {
-    id: 'p1',
-    title: 'How AI is Transforming Business Operations in 2026',
-    slug: 'ai-transforming-business-operations-2026',
-    excerpt: 'Explore the latest AI trends reshaping how businesses automate workflows, predict outcomes, and make data-driven decisions.',
-    coverImage: null,
-    publishedAt: new Date('2026-08-15'),
-    readingTime: 5,
-    tags: 'AI,automation,business',
-    category: { name: 'AI & Automation', slug: 'ai-automation' },
-    author: { name: 'AIOpsMedia Team', image: null },
-  },
-  {
-    id: 'p2',
-    title: 'Building Scalable ERP Systems: Best Practices',
-    slug: 'building-scalable-erp-systems',
-    excerpt: 'A deep dive into the architecture decisions, technology choices, and design patterns that make ERP systems maintainable at scale.',
-    coverImage: null,
-    publishedAt: new Date('2026-08-01'),
-    readingTime: 8,
-    tags: 'ERP,architecture,development',
-    category: { name: 'Development', slug: 'development' },
-    author: { name: 'AIOpsMedia Team', image: null },
-  },
-  {
-    id: 'p3',
-    title: 'Why Every School Needs a Digital Management System',
-    slug: 'why-schools-need-digital-management',
-    excerpt: 'From attendance tracking to parent communication — learn how modern school ERP systems are eliminating administrative overhead.',
-    coverImage: null,
-    publishedAt: new Date('2026-07-20'),
-    readingTime: 4,
-    tags: 'education,school,ERP',
-    category: { name: 'Education', slug: 'education' },
-    author: { name: 'AIOpsMedia Team', image: null },
-  },
-];
+const fallbackPosts = staticBlogs.slice(0, 9).map((b, i) => ({
+  id: `static-${i}`,
+  title: b.title,
+  slug: b.slug,
+  excerpt: b.description,
+  coverImage: null,
+  publishedAt: new Date(b.publishedAt),
+  readingTime: b.readingTime,
+  tags: b.tags.join(','),
+  category: { name: b.category, slug: b.category.toLowerCase().replace(/ /g, '-') },
+  author: { name: 'AIOpsMedia Team', image: null },
+}));
+const allFallback = staticBlogs.map((b, i) => ({
+  id: `static-${i}`,
+  title: b.title,
+  slug: b.slug,
+  excerpt: b.description,
+  coverImage: null,
+  publishedAt: new Date(b.publishedAt),
+  readingTime: b.readingTime,
+  tags: b.tags.join(','),
+  category: { name: b.category, slug: b.category.toLowerCase().replace(/ /g, '-') },
+  author: { name: 'AIOpsMedia Team', image: null },
+}));
 
 export default async function BlogPage({ searchParams }) {
   const params = await searchParams;
@@ -124,7 +111,24 @@ export default async function BlogPage({ searchParams }) {
   const category = params?.category || '';
 
   const { posts, totalPages, currentPage, categories } = await getBlogData(page, search, category);
-  const displayPosts = posts.length > 0 ? posts : fallbackPosts;
+  let displayPosts = posts.length > 0 ? posts : fallbackPosts;
+  let displayTotal = totalPages;
+  let isFallback = posts.length === 0;
+  if (isFallback) {
+    let filtered = allFallback;
+    if (search) {
+      const s = search.toLowerCase();
+      filtered = filtered.filter((p) => p.title.toLowerCase().includes(s) || p.excerpt.toLowerCase().includes(s) || p.tags.toLowerCase().includes(s));
+    }
+    if (category) filtered = filtered.filter((p) => p.category.slug === category);
+    const start = (page - 1) * 9;
+    displayPosts = filtered.slice(start, start + 9);
+    displayTotal = Math.max(1, Math.ceil(filtered.length / 9));
+    // augment categories from static
+    if (categories.length === 0) {
+      // will be handled below
+    }
+  }
 
   function buildUrl(overrides) {
     const sp = new URLSearchParams();
@@ -173,7 +177,12 @@ export default async function BlogPage({ searchParams }) {
           </form>
         </div>
 
-        {categories.length > 0 && (
+        {(() => {
+          const cats = categories.length > 0 ? categories : Array.from(new Set(allFallback.map((p) => p.category.slug))).map((slug) => {
+            const first = allFallback.find((p) => p.category.slug === slug);
+            return { name: first.category.name, slug };
+          });
+          return (
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
             <Link
               href="/blog"
@@ -185,7 +194,7 @@ export default async function BlogPage({ searchParams }) {
             >
               All
             </Link>
-            {categories.map((cat) => (
+            {cats.map((cat) => (
               <Link
                 key={cat.slug}
                 href={`/blog?category=${cat.slug}`}
@@ -199,7 +208,8 @@ export default async function BlogPage({ searchParams }) {
               </Link>
             ))}
           </div>
-        )}
+          );
+        })()}
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {displayPosts.map((post) => (
@@ -246,7 +256,7 @@ export default async function BlogPage({ searchParams }) {
           ))}
         </div>
 
-        {totalPages > 1 && (
+        {(isFallback ? displayTotal : totalPages) > 1 && (
           <nav className="mt-12 flex items-center justify-center gap-2" aria-label="Pagination">
             {currentPage > 1 && (
               <Button asChild variant="outline" size="sm">
@@ -254,7 +264,7 @@ export default async function BlogPage({ searchParams }) {
               </Button>
             )}
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            {Array.from({ length: (isFallback ? displayTotal : totalPages) }, (_, i) => i + 1).map((p) => (
               <Button
                 key={p}
                 asChild
@@ -266,7 +276,7 @@ export default async function BlogPage({ searchParams }) {
               </Button>
             ))}
 
-            {currentPage < totalPages && (
+            {currentPage < (isFallback ? displayTotal : totalPages) && (
               <Button asChild variant="outline" size="sm">
                 <Link href={buildUrl({ page: currentPage + 1 })}>Next</Link>
               </Button>
